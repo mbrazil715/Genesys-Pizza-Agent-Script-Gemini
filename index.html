@@ -362,10 +362,54 @@
             render(newData);
         }
 
-        // Init
-        window.addEventListener('DOMContentLoaded', () => {
-            render(currentData);
-        });
+     // ===============================
+// GENESYS CLOUD INITIALIZATION
+// ===============================
+window.ININ = window.ININ || {};
+
+ININ.core.on('init', async function (data) {
+    console.log("Genesys init received", data);
+
+    try {
+        const conversationId = data.conversationId;
+        const participantId = data.participantId;
+        const accessToken = data.accessToken;
+        const environment = data.environment; // e.g. mypurecloud.com
+
+        const response = await fetch(
+            `https://api.${environment}/api/v2/conversations/calls/${conversationId}/participants/${participantId}/attributes`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        const attributes = await response.json();
+        console.log("Participant attributes:", attributes);
+
+        // 🔽 Map Genesys Participant Data → Your UI data model
+        currentData = {
+            customerName: "Caller",
+            deliveryAddress: attributes.DeliveryAddressSlotVar || "--",
+            pizzaType: attributes.PizzaToppingSlotVar ? "Custom" : "Signature",
+            signatureSelection: attributes.PizzaToppingSlotVar ? "" : "BBQ Chicken Feast",
+            toppings: attributes.PizzaToppingSlotVar || "",
+            size: attributes.PizzaSizeSlotVar || "--",
+            quantity: attributes.PizzaQuantitySlotVar || "--",
+            crustType: attributes.CrustSlotVar || "--"
+        };
+
+        // 🔥 Render UI with REAL bot data
+        render(currentData);
+
+    } catch (err) {
+        console.error("Failed to load Genesys participant data", err);
+
+        // Fallback so UI still loads
+        render(currentData);
+    }
+});
     </script>
 </body>
 </html>
